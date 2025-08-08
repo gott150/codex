@@ -1,0 +1,19 @@
+version: 1
+name: research
+description: "Research flow"
+providers:
+  default: gemini
+  map:
+    gemini:
+      model: "gemini-1.5-pro"
+      apiKeyEnv: "GEMINI_API_KEY"
+
+agents:
+  - id: researcher
+    role: "Research a topic"
+    model: gemini
+    tools: []
+
+flow:
+  entry: researcher
+  edges: []

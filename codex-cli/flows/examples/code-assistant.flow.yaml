@@ -1,0 +1,60 @@
+version: 1
+name: code-assistant
+description: "Plan -> Implement -> Review -> Finalize"
+providers:
+  default: gemini
+  map:
+    gemini:
+      model: "gemini-1.5-pro"
+      apiKeyEnv: "GEMINI_API_KEY"
+    openai:
+      model: "gpt-4o-mini"
+      apiKeyEnv: "OPENAI_API_KEY"
+
+memory:
+  short_term: { type: "in-memory", maxItems: 50 }
+  long_term:  { type: "sqlite", file: ".codex/memory.db" }
+  vector:     { type: "vector",  file: ".codex/index" }
+
+tools:
+  - id: shell
+    type: builtin.shell
+    allow:
+      - "cat"
+      - "node"
+  - id: http
+    type: builtin.http
+  - id: docs
+    type: mcp
+    server: "http://localhost:3001"
+    capability: "search"
+
+agents:
+  - id: planner
+    role: "Decompose task into steps and assign to agents."
+    model: gemini
+    tools: [http, docs]
+  - id: coder
+    role: "Write and modify code; call shell when needed."
+    model: gemini
+    tools: [shell]
+  - id: critic
+    role: "Review outputs for correctness and security."
+    model: openai
+    tools: []
+
+flow:
+  entry: planner
+  edges:
+    - from: planner
+      to: coder
+      when: "hasPlan == true"
+    - from: coder
+      to: critic
+      when: "changedFiles.length > 0"
+    - from: critic
+      to: planner
+      when: "review.rework == true"
+    - from: critic
+      to: END
+      when: "review.ok == true"
