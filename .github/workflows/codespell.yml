@@ -1,27 +1,58 @@
-# Codespell configuration is within .codespellrc
----
-name: Codespell
+name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main, master ]
   pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   codespell:
-    name: Check for spelling errors
+    name: Codespell
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Codespell
+        uses: codespell-project/actions-codespell@v2
+        with:
+          # passe ggf. Pfade/Ignore-Liste an:
+          check_filenames: true
+          skip: .git,dist,node_modules
 
+  build-test:
+    name: Build & Test (Node 20)
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Annotate locations with typos
-        uses: codespell-project/codespell-problem-matcher@b80729f885d32f78a716c2f107b4db1025001c42 # v1
-      - name: Codespell
-        uses: codespell-project/actions-codespell@406322ec52dd7b488e48c1c4b82e2a8b3a1bf630 # v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          ignore_words_file: .codespellignore
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (optional)
+        run: pnpm run lint || echo "No lint script"
+
+      - name: Typecheck (optional)
+        run: pnpm run typecheck || echo "No typecheck script"
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test -- --run
