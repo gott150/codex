@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "codex": "bin/codex.ts"
+    "codex-flow": "dist/bin/codex.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

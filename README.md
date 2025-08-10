@@ -11,7 +11,7 @@ pnpm install
 cd codex-cli
 pnpm build
 pnpm test
-pnpm dev flow run flows/examples/code-assistant.flow.yaml -i "Hello" --profile local
+codex-flow flow run flows/examples/code-assistant.flow.yaml -i "Hello" --profile local
 ```
 
 That command executes the example flow consisting of planner → coder → critic agents and streams tokens to the terminal.
@@ -36,6 +36,17 @@ From the `codex-cli/` directory:
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm test`
+
+## Global usage
+
+```bash
+pnpm -C codex-cli build
+pnpm -C codex-cli link -g
+codex-flow --help
+
+pnpm unlink -g @openai/codex || true
+hash -r 2>/dev/null || true
+```
 
 ## License
 
