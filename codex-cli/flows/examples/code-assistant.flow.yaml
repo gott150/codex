@@ -1,0 +1,56 @@
+version: 1
+name: code-assistant
+description: "Plan -> Implement -> Review -> Finalize"
+providers:
+  default: openai
+  map:
+    openai:
+      model: "gpt-4o-mini"
+      apiKeyEnv: "OPENAI_API_KEY"
+
+memory:
+  short_term: { type: "in-memory", maxItems: 50 }
+  long_term:  { type: "sqlite", file: ".codex/memory.db" }
+  vector:     { type: "vector",  file: ".codex/index" }
+
+tools:
+  - id: fs
+    type: builtin.fs
+  - id: shell
+    type: builtin.shell
+    allow:
+      - "echo"
+      - "node"
+      - "cat"
+      - "npm"
+  - id: http
+    type: builtin.http
+
+agents:
+  - id: planner
+    role: "Decompose task into steps and assign to agents."
+    model: openai
+    tools: [http]
+  - id: coder
+    role: "Write and modify code; call shell when needed."
+    model: openai
+    tools: [fs, shell]
+  - id: critic
+    role: "Review outputs for correctness and security."
+    model: openai
+    tools: []
+
+flow:
+  entry: planner
+  edges:
+    - from: planner
+      to: coder
+      when: "plan"
+    - from: coder
+      to: critic
+    - from: critic
+      to: planner
+      when: "review.ok == false"
+    - from: critic
+      to: END
+      when: "review.ok == true"
