@@ -7,14 +7,25 @@ The TypeScript implementation lives in `codex-cli/` and provides a flow-based or
 ## Quick start
 
 ```bash
-pnpm install
-cd codex-cli
-pnpm build
-pnpm test
-codex-flow flow run flows/examples/code-assistant.flow.yaml -i "Hello" --profile local
+codex-flow            # startet REPL, sucht automatisch Flow im aktuellen Ordner
+codex-flow chat flows/examples/code-assistant.flow.yaml  # explizit
 ```
 
-That command executes the example flow consisting of planner → coder → critic agents and streams tokens to the terminal.
+Im Chat stehen Kommandos wie `/exit`, `/reset`, `/save <trace.json>`, `/profile <name>` und `/load <flow.yml>` zur Verfügung.
+
+## Ein-Kommando-Setup
+
+```bash
+bash scripts/setup.sh
+# danach:
+codex-flow               # startet die REPL
+```
+
+Für Windows:
+
+```powershell
+pwsh -File scripts/setup.ps1
+```
 
 ## Project layout
 

@@ -19,10 +19,18 @@ export const flowRunSubcommand: CommandModule = {
         type: 'string',
         default: 'local',
         describe: 'Config profile',
+      })
+      .option('config-root', {
+        type: 'string',
+        describe: 'Explicit config root',
       }),
   handler: async (args: any) => {
     const flow = await loadFlow(args.file);
-    const config = await loadConfig(args.profile);
+    const config = await loadConfig({
+      profile: args.profile,
+      flowFile: args.file,
+      configRoot: args['config-root'],
+    });
     const orchestrator = Orchestrator.fromFlow(flow, config);
     const { result } = await orchestrator.run(args.input ?? '', {
       onEvent: streamRenderer(),

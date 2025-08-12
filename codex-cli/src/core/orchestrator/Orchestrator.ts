@@ -14,14 +14,30 @@ export interface RunOptions {
 
 /** Flow orchestrator */
 export class Orchestrator {
+  private ctx: ExecutionContext;
+
   constructor(
     private flow: FlowConfig,
     private router: Router,
     private registry: AgentRegistry,
-    private config: Record<string, unknown>
-  ) {}
+    private config: Record<string, unknown>,
+    ctx?: ExecutionContext
+  ) {
+    this.ctx =
+      ctx ?? {
+        provider: router.getProvider(flow.providers.default, flow.providers),
+        state: {},
+        trace: [],
+        config,
+        memory: new InMemoryStore(),
+      };
+  }
 
-  static fromFlow(flow: FlowConfig, config: Record<string, unknown>, router: Router = new Router()): Orchestrator {
+  static fromFlow(
+    flow: FlowConfig,
+    config: Record<string, unknown>,
+    router: Router = new Router()
+  ): Orchestrator {
     const registry = new AgentRegistry();
     registry.register(new PlannerAgent());
     registry.register(new CoderAgent());
@@ -29,17 +45,23 @@ export class Orchestrator {
     return new Orchestrator(flow, router, registry, config);
   }
 
-  async run(input: unknown, opts: RunOptions = {}): Promise<{ result: unknown; trace: TraceEvent[] }> {
+  reset() {
+    this.ctx.state = {};
+    this.ctx.trace = [];
+    this.ctx.memory = new InMemoryStore();
+  }
+
+  getTrace(): TraceEvent[] {
+    return this.ctx.trace;
+  }
+
+  async run(
+    input: unknown,
+    opts: RunOptions = {}
+  ): Promise<{ result: unknown; trace: TraceEvent[] }> {
     let current = this.flow.flow.entry;
     let value: unknown = input;
-    const ctx: ExecutionContext = {
-      provider: this.router.getProvider(this.flow.providers.default, this.flow.providers),
-      state: {},
-      trace: [],
-      config: this.config,
-      memory: new InMemoryStore(),
-      emit: opts.onEvent,
-    };
+    this.ctx.emit = opts.onEvent;
     const parser = new Parser();
     let steps = 0;
     while (current !== 'END' && steps < 100) {
@@ -47,9 +69,12 @@ export class Orchestrator {
       const agent = this.registry.get(current);
       if (!agent) throw new Error(`Unknown agent ${current}`);
       const agentCfg = this.flow.agents.find((a) => a.id === current);
-      ctx.provider = this.router.getProvider(agentCfg?.model ?? this.flow.providers.default, this.flow.providers);
-      const output = await agent.run(value, ctx);
-      ctx.trace.push({ agent: current, input: value, output });
+      this.ctx.provider = this.router.getProvider(
+        agentCfg?.model ?? this.flow.providers.default,
+        this.flow.providers
+      );
+      const output = await agent.run(value, this.ctx);
+      this.ctx.trace.push({ agent: current, input: value, output });
       value = output;
       const edges = this.flow.flow.edges.filter((e) => e.from === current);
       let next = 'END';
@@ -60,7 +85,7 @@ export class Orchestrator {
         }
         let pass = false;
         try {
-          pass = !!parser.evaluate(edge.when, ctx.state);
+          pass = !!parser.evaluate(edge.when, this.ctx.state);
         } catch {
           pass = false;
         }
@@ -71,6 +96,6 @@ export class Orchestrator {
       }
       current = next;
     }
-    return { result: value, trace: ctx.trace };
+    return { result: value, trace: this.ctx.trace };
   }
 }
