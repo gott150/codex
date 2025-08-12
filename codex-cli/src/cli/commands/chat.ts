@@ -6,7 +6,7 @@ import { loadFlow } from '../../loaders/FlowLoader.js';
 import { loadConfig } from '../../loaders/ConfigLoader.js';
 import { Orchestrator } from '../../core/orchestrator/Orchestrator.js';
 import { streamRenderer } from '../ui/streamRenderer.js';
-import { resolveDefaultFlow } from '../utils/resolve-default-flow.js';
+import { resolveFlow } from '../utils/resolve-flow.js';
 
 export const chatCommand: CommandModule = {
   command: 'chat [file]',
@@ -18,15 +18,14 @@ export const chatCommand: CommandModule = {
       .option('profile', { type: 'string', default: 'local' })
       .option('input', { alias: 'i', type: 'string', describe: 'Initial input' })
       .option('trace', { type: 'string', describe: 'Write trace to file on exit' })
-      .option('verbose', { type: 'boolean', default: false })
-      .option('config-root', { type: 'string', describe: 'Explicit config root' }),
+      .option('verbose', { type: 'boolean', default: false }),
   handler: async (args: any) => {
     let file = args.file as string | undefined;
-    if (!file) file = await resolveDefaultFlow();
+    if (!file) file = await resolveFlow({ workspace: process.cwd() });
     let profile = args.profile as string;
     let flow = await loadFlow(file);
-    let config = await loadConfig({ profile, flowFile: file, configRoot: args['config-root'] });
-    let orchestrator = Orchestrator.fromFlow(flow, config);
+    let config = await loadConfig({ profile, flowFile: file, workspace: process.cwd() });
+    let orchestrator = Orchestrator.fromFlow(flow, config, process.cwd());
 
     const run = async (prompt: string) => {
       await orchestrator.run(prompt, { onEvent: streamRenderer() });
@@ -54,16 +53,16 @@ export const chatCommand: CommandModule = {
       }
       if (line.startsWith('/profile ')) {
         profile = line.split(' ')[1] ?? profile;
-        config = await loadConfig({ profile, flowFile: file, configRoot: args['config-root'] });
-        orchestrator = Orchestrator.fromFlow(flow, config);
+        config = await loadConfig({ profile, flowFile: file, workspace: process.cwd() });
+        orchestrator = Orchestrator.fromFlow(flow, config, process.cwd());
         rl.prompt();
         continue;
       }
       if (line.startsWith('/load ')) {
         file = line.split(' ')[1] ?? file;
         flow = await loadFlow(file);
-        config = await loadConfig({ profile, flowFile: file, configRoot: args['config-root'] });
-        orchestrator = Orchestrator.fromFlow(flow, config);
+        config = await loadConfig({ profile, flowFile: file, workspace: process.cwd() });
+        orchestrator = Orchestrator.fromFlow(flow, config, process.cwd());
         rl.prompt();
         continue;
       }

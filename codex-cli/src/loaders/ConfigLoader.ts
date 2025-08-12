@@ -5,7 +5,7 @@ import yaml from 'yaml';
 interface LoadConfigOpts {
   profile?: string;
   flowFile?: string;
-  configRoot?: string;
+  workspace?: string;
 }
 
 async function exists(p: string) {
@@ -20,9 +20,12 @@ async function exists(p: string) {
 export async function loadConfig(opts: LoadConfigOpts = {}): Promise<Record<string, unknown>> {
   const profile = opts.profile ?? 'local';
   const roots: string[] = [];
-  if (opts.flowFile) roots.push(path.dirname(path.resolve(opts.flowFile)));
-  if (opts.configRoot) roots.push(path.resolve(opts.configRoot));
-  roots.push(process.cwd());
+  const workspace = path.resolve(opts.workspace ?? process.cwd());
+  roots.push(workspace);
+  if (opts.flowFile) {
+    const flowDir = path.dirname(path.resolve(opts.flowFile));
+    if (!roots.includes(flowDir)) roots.push(flowDir);
+  }
   for (const r of roots) {
     const basePath = path.join(r, 'config/settings.yaml');
     if (await exists(basePath)) {

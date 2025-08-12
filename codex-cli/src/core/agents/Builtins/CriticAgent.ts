@@ -1,21 +1,19 @@
 import type { Agent } from '../Agent.js';
 import type { ExecutionContext } from '../../orchestrator/ExecutionContext.js';
 
-/** Critic agent placeholder */
+/** Critic agent reviews changes */
 export class CriticAgent implements Agent {
   id = 'critic';
   role = 'critic';
   model = 'openai';
   tools: string[] = [];
 
-  async run(input: unknown, ctx: ExecutionContext): Promise<unknown> {
-    const prompt = `critique:${String(input)}`;
-    let out = '';
-    for await (const ev of ctx.provider.stream(prompt)) {
-      ctx.emit?.(ev);
-      if (ev.type === 'token') out += ev.value;
-    }
-    ctx.state.review = { ok: true };
-    return out;
+  async run(_input: unknown, ctx: ExecutionContext): Promise<unknown> {
+    const ok = (ctx.state.changedFilesCount ?? 0) > 0;
+    ctx.state.review = ok ? { ok: true } : { ok: false, rework: ['no changes'] };
+    const ev = { type: 'review', review: ctx.state.review };
+    ctx.trace.push(ev);
+    ctx.emit?.(ev as any);
+    return ctx.state.review;
   }
 }

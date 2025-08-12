@@ -14,12 +14,15 @@ memory:
   vector:     { type: "vector",  file: ".codex/index" }
 
 tools:
+  - id: fs
+    type: builtin.fs
   - id: shell
     type: builtin.shell
     allow:
       - "echo"
       - "node"
       - "cat"
+      - "npm"
   - id: http
     type: builtin.http
 
@@ -31,7 +34,7 @@ agents:
   - id: coder
     role: "Write and modify code; call shell when needed."
     model: openai
-    tools: [shell]
+    tools: [fs, shell]
   - id: critic
     role: "Review outputs for correctness and security."
     model: openai
@@ -42,13 +45,12 @@ flow:
   edges:
     - from: planner
       to: coder
-      when: "hasPlan == true"
+      when: "plan"
     - from: coder
       to: critic
-      when: "changedFilesCount > 0"
     - from: critic
       to: planner
-      when: "review.rework == true"
+      when: "review.ok == false"
     - from: critic
       to: END
       when: "review.ok == true"

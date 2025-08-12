@@ -33,6 +33,9 @@ importers:
 
   codex-cli:
     dependencies:
+      diff:
+        specifier: ^5.2.0
+        version: 5.2.0
       dotenv:
         specifier: ^16.4.5
         version: 16.5.0
@@ -874,6 +877,10 @@ packages:
   diff-sequences@29.6.3:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
+
+  diff@5.2.0:
+    resolution: {integrity: sha512-uIFDxqpRZGZ6ThOk84hEfqWoHx2devRFvpTZcTHur85vImfaxUbTW9Ryh4CpCuDnToOP1CEtXKIgytHBPVff5A==}
+    engines: {node: '>=0.3.1'}
 
   dotenv@16.5.0:
     resolution: {integrity: sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg==}
@@ -2391,6 +2398,8 @@ snapshots:
   deep-is@0.1.4: {}
 
   diff-sequences@29.6.3: {}
+
+  diff@5.2.0: {}
 
   dotenv@16.5.0: {}
 

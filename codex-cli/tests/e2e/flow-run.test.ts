@@ -31,15 +31,20 @@ describe('e2e flow run', () => {
   test('planner -> coder -> critic -> END', async () => {
     const flowPath = path.resolve(__dirname, '../../flows/examples/code-assistant.flow.yaml');
     const flow = await loadFlow(flowPath);
-    const orch = Orchestrator.fromFlow(flow, {}, new MockRouter());
+    const orch = Orchestrator.fromFlow(flow, {}, process.cwd(), new MockRouter());
     const { trace } = await orch.run('Hello');
-    expect(trace.map((t) => t.agent)).toEqual(['planner', 'coder', 'critic']);
+    expect(trace.filter((t) => t.type === 'agent').map((t) => t.agent)).toEqual([
+      'planner',
+      'coder',
+      'critic',
+    ]);
   });
 
   test('shell tool whitelist', async () => {
     const shell = new ShellTool(['echo']);
-    await expect(shell.call({ cmd: 'echo hi' }, {} as any)).resolves.toBe('hi');
-    await expect(shell.call({ cmd: 'ls' }, {} as any)).rejects.toThrow('not allowed');
+    const ctx: any = { workspace: process.cwd(), trace: [], state: {}, config: {}, memory: {}};
+    await expect(shell.call({ cmd: 'echo hi' }, ctx)).resolves.toMatchObject({ stdout: 'hi' });
+    await expect(shell.call({ cmd: 'ls' }, ctx)).rejects.toThrow('not allowed');
   });
 
   test('invalid flow yields zod error', async () => {

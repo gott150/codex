@@ -20,18 +20,23 @@ export class ShellTool implements Tool {
     private maxBuffer = SIXTY_FOUR_KB,
   ) {}
 
-  async call(input: unknown, _ctx: ExecutionContext): Promise<unknown> {
+  async call(input: unknown, ctx: ExecutionContext): Promise<unknown> {
     const { cmd } = this.schema.parse(input);
     const [bin] = cmd.split(' ');
     if (!this.allow.includes(bin)) {
       throw new Error(`Command "${bin}" not allowed`);
     }
     try {
-      const { stdout } = await exec(cmd, {
+      const { stdout, stderr } = await exec(cmd, {
+        cwd: ctx.workspace,
         timeout: this.timeoutMs,
         maxBuffer: this.maxBuffer,
       });
-      return stdout.trim();
+      const result = { stdout: stdout.trim(), stderr: stderr.trim(), code: 0 };
+      const ev = { type: 'shell', cmd, result };
+      ctx.trace.push(ev);
+      ctx.emit?.(ev as any);
+      return result;
     } catch (err: any) {
       if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
         throw new Error(`Command "${bin}" exceeded output limit`);
@@ -39,7 +44,15 @@ export class ShellTool implements Tool {
       if (err.killed || err.signal) {
         throw new Error(`Command "${bin}" timed out`);
       }
-      throw err;
+      const result = {
+        stdout: err.stdout?.toString().trim() ?? '',
+        stderr: err.stderr?.toString().trim() ?? '',
+        code: typeof err.code === 'number' ? err.code : 1,
+      };
+      const ev = { type: 'shell', cmd, result };
+      ctx.trace.push(ev);
+      ctx.emit?.(ev as any);
+      return result;
     }
   }
 }

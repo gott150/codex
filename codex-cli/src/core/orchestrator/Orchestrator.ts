@@ -7,6 +7,10 @@ import { CriticAgent } from '../agents/Builtins/CriticAgent.js';
 import type { ExecutionContext, TraceEvent } from './ExecutionContext.js';
 import type { FlowConfig } from '../../schema/flow.schema.js';
 import { Router } from './Router.js';
+import { ToolRegistry } from '../tools/ToolRegistry.js';
+import { ShellTool } from '../tools/ShellTool.js';
+import { HttpTool } from '../tools/HttpTool.js';
+import { FsTool } from '../tools/FsTool.js';
 
 export interface RunOptions {
   onEvent?: (e: any) => void;
@@ -21,8 +25,19 @@ export class Orchestrator {
     private router: Router,
     private registry: AgentRegistry,
     private config: Record<string, unknown>,
+    private workspace: string,
     ctx?: ExecutionContext
   ) {
+    const tools = new ToolRegistry();
+    for (const t of flow.tools) {
+      if (t.type === 'builtin.shell') {
+        tools.register(new ShellTool((t as any).allow));
+      } else if (t.type === 'builtin.http') {
+        tools.register(new HttpTool());
+      } else if (t.type === 'builtin.fs') {
+        tools.register(new FsTool(workspace));
+      }
+    }
     this.ctx =
       ctx ?? {
         provider: router.getProvider(flow.providers.default, flow.providers),
@@ -30,19 +45,22 @@ export class Orchestrator {
         trace: [],
         config,
         memory: new InMemoryStore(),
+        tools,
+        workspace,
       };
   }
 
   static fromFlow(
     flow: FlowConfig,
     config: Record<string, unknown>,
+    workspace: string,
     router: Router = new Router()
   ): Orchestrator {
     const registry = new AgentRegistry();
     registry.register(new PlannerAgent());
     registry.register(new CoderAgent());
     registry.register(new CriticAgent());
-    return new Orchestrator(flow, router, registry, config);
+    return new Orchestrator(flow, router, registry, config, workspace);
   }
 
   reset() {
@@ -64,7 +82,8 @@ export class Orchestrator {
     this.ctx.emit = opts.onEvent;
     const parser = new Parser();
     let steps = 0;
-    while (current !== 'END' && steps < 100) {
+    const MAX_STEPS = 3;
+    while (current !== 'END' && steps < MAX_STEPS) {
       steps++;
       const agent = this.registry.get(current);
       if (!agent) throw new Error(`Unknown agent ${current}`);
@@ -74,7 +93,7 @@ export class Orchestrator {
         this.flow.providers
       );
       const output = await agent.run(value, this.ctx);
-      this.ctx.trace.push({ agent: current, input: value, output });
+      this.ctx.trace.push({ type: 'agent', agent: current, input: value, output });
       value = output;
       const edges = this.flow.flow.edges.filter((e) => e.from === current);
       let next = 'END';
@@ -96,6 +115,9 @@ export class Orchestrator {
       }
       current = next;
     }
+    const endEv = { type: 'end', result: value };
+    this.ctx.trace.push(endEv);
+    this.ctx.emit?.(endEv as any);
     return { result: value, trace: this.ctx.trace };
   }
 }

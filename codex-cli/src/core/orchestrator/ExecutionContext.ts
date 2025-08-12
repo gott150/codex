@@ -1,11 +1,11 @@
 import type { LlmProvider } from '../llm/LlmProvider.js';
 import type { Memory } from '../memory/Memory.js';
 import type { StreamEvent } from '../llm/Streaming.js';
+import type { ToolRegistry } from '../tools/ToolRegistry.js';
 
 export interface TraceEvent {
-  agent: string;
-  input: unknown;
-  output: unknown;
+  type: string;
+  [key: string]: any;
 }
 
 /** Execution context passed to agents and tools */
@@ -15,5 +15,7 @@ export interface ExecutionContext {
   trace: TraceEvent[];
   config: Record<string, unknown>;
   memory: Memory;
+  tools: ToolRegistry;
+  workspace: string;
   emit?: (event: StreamEvent) => void;
 }
