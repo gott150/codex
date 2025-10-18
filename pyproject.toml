@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "livekit-cli-service"
+version = "0.1.0"
+description = "Raspberry Pi focused LiveKit audio CLI"
+authors = [{ name = "LiveKit Client" }]
+readme = "docs/livekit_client/README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "livekit>=0.22,<0.23",
+  "python-dotenv>=1.0",
+  "requests>=2.32",
+  "sounddevice>=0.4.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.23",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["livekit_client"]
